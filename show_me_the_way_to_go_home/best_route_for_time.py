@@ -8,10 +8,12 @@ import datetime
 import sys
 
 import docopt
-from collections import defaultdict
+from typing import Dict
 
 from show_me_the_way_to_go_home.configuration import get_configuration
-from show_me_the_way_to_go_home.math import next_five_minutes
+from show_me_the_way_to_go_home.models.travel_time import TravelTime
+from show_me_the_way_to_go_home.models.weekday import Weekday
+from show_me_the_way_to_go_home.time_math import next_five_minutes
 
 
 def main():
@@ -29,30 +31,27 @@ def main():
 
     traveltime_stats = load_traveltime_stats(configuration)
 
-    for starttime, routes in traveltime_stats[departure_time.weekday()].items():
-        print(starttime)
-        for route, times in routes.items():
-            print("{}: {}".format(route, times))
+    print(traveltime_stats[now.weekday()].median_travel_times_for_route('via_alvsborgsbron'))
 
 
 
-def load_traveltime_stats(configuration):
+def load_traveltime_stats(configuration) -> Dict[int, Weekday]:
     if not configuration.stats_file.is_file():
         print("Could not find stats file at '{}'".format(configuration.stats_file))
         sys.exit(1)
 
-    traveltime_stats = {i: defaultdict(lambda: defaultdict(list)) for i in range(7)}
-
+    traveltimes = []
     with configuration.stats_file.open('r') as stats_file:
         reader = csv.DictReader(stats_file)
-        routes = reader.fieldnames[1:]
         for row in reader:
-            time = datetime.datetime.strptime(row['datetime'], '%Y%m%d %H:%M')
-            hour_minute = time.strftime('%H:%M')
-            weekday = time.weekday()
-            for route in routes:
-                traveltime_stats[weekday][hour_minute][route].append(row[route])
+            traveltimes.append(TravelTime.from_csv_row(row))
+
+    traveltime_stats = {i: Weekday(i, traveltimes) for i in range(7)}
     return traveltime_stats
+
 
 if __name__ == '__main__':
     main()
+
+
+

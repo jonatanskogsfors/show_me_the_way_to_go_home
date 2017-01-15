@@ -10,6 +10,9 @@ configuration.yml
 # C extensions
 *.so
 
+# ipython
+*.ipynb
+
 # Packages
 *.egg
 *.egg-info
